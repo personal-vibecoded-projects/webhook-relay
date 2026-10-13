@@ -10,7 +10,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "relay_migrator", "-d", "relay"]
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "relay_migrator", "-d", "relay"]
       interval: 5s
       timeout: 3s
       retries: 10
