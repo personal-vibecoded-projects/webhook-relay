@@ -55,7 +55,10 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - run: python3 scripts/init_dev_secrets.py
       - run: docker compose up --build --wait --wait-timeout 120
+      - run: docker compose run --build --rm migrate
+      - run: docker compose run --build --rm database-tests
       - run: |
           curl --fail --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:8000/api/health
           curl --fail --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:5173/api/health

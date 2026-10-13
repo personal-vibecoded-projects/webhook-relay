@@ -2,15 +2,18 @@
 
 A webhook delivery platform built through sequential CodeRabbit-reviewed PRs.
 
-The baseline contains a React dashboard, FastAPI liveness endpoint, Docker Compose,
-and automated checks. Event delivery and persistence are planned, not implemented.
+The app contains a React dashboard, FastAPI liveness endpoint, and a PostgreSQL
+workspace schema managed by Alembic. Workspace API access and event delivery are
+not implemented yet.
 
 ## Run
 
 With Docker and Compose:
 
 ```sh
-docker compose up --build
+python3 scripts/init_dev_secrets.py
+docker compose up --build --wait
+docker compose run --build --rm migrate
 ```
 
 Open http://localhost:5173. API docs: http://localhost:8000/docs.
@@ -50,6 +53,19 @@ npm test
 ```
 
 Browser tests start both services; install the backend first.
+
+Database migration, constraint, and schema-drift tests run against PostgreSQL:
+
+```sh
+docker compose run --build --rm database-tests
+```
+
+Each database test creates and drops its own randomly named database. The `relay`
+database is not modified by tests. Tests require database-creation privileges.
+Ordinary `pytest` skips these tests; the container CI job runs them explicitly.
+
+See [the database guide](docs/database.md) for schema details, migrations, and
+the demo walkthrough.
 
 ## Review sequence
 
