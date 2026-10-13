@@ -1,0 +1,63 @@
+name: Baseline checks
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: baseline-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        with:
+          version: "0.13.0"
+          enable-cache: false
+      - run: uv sync --locked --group dev --python 3.12
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pytest
+  dashboard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        with:
+          version: "0.13.0"
+          enable-cache: false
+      - run: uv sync --locked --group dev --python 3.12 --project ../backend
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm test
+  containers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - run: docker compose up --build --wait --wait-timeout 120
+      - run: |
+          curl --fail --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:8000/api/health
+          curl --fail --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:5173/api/health
+      - if: always()
+        run: docker compose down
