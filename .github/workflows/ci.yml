@@ -59,6 +59,7 @@ jobs:
       - run: |
           curl --fail --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:8000/api/health
           curl --fail --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:5173/api/health
+          curl --fail --output /dev/null http://127.0.0.1:5173/src/main.tsx
       - if: failure()
         run: docker compose logs --no-color
       - if: always()
