@@ -23,9 +23,12 @@ limits stored JSONB text to 256 KiB. Intake snapshots mutable payloads.
 keyset cursors. The UUID breaks timestamp ties. Pages contain at most 200
 events; pagination is a live view, not a snapshot of concurrent writes.
 
-`purge_events` deletes at most 1,000 old events from one workspace per
-transaction, skipping rows held by other transactions. Repeated runs drain
-eligible rows. Retention ends the deduplication window: a purged provider ID
+`purge_events` deletes at most `batch_size` old events from one workspace per
+call (default 500, maximum 1,000), skipping rows held by other transactions.
+Callers should commit between calls to bound transaction lock and WAL growth;
+multiple calls in one transaction can delete more than 1,000 events.
+Repeated runs drain eligible rows. Retention ends the deduplication window:
+a purged provider ID
 can be accepted again. A concurrent purge between conflict detection and
 duplicate lookup raises a retryable conflict. The cutoff cannot be future.
 
