@@ -55,10 +55,23 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24"
       - run: python3 scripts/init_dev_secrets.py
-      - run: docker compose up --build --wait --wait-timeout 120
+      - run: docker compose up --wait --wait-timeout 120 db
       - run: docker compose run --build --rm migrate
+      - run: docker compose up --build --wait --wait-timeout 120
       - run: docker compose run --build --rm database-tests
+      - run: npm ci
+        working-directory: frontend
+      - run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - run: npm test
+        working-directory: frontend
+        env:
+          E2E_BASE_URL: http://localhost:5173
+          RUN_AUTH_E2E: "1"
       - run: |
           curl --fail --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:8000/api/health
           curl --fail --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:5173/api/health

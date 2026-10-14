@@ -1,6 +1,7 @@
 import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
+import { AccessPanel } from './access';
 
 type Connection = 'checking' | 'connected' | 'unavailable';
 
@@ -47,20 +48,21 @@ function App() {
         <div className="section-label">WORKSPACE</div>
         <div className="current-page">Overview <span>01</span></div>
         <p className="sidebar-note">Built one reviewed increment at a time.</p>
-        <div className="baseline-badge">Baseline · v0.1.0</div>
+        <div className="baseline-badge">Workspace access · v0.2.0</div>
       </aside>
       <main>
         <header className="topbar"><span>Workspace <span className="slash">/</span> Overview</span><span className="tag">LOCAL</span></header>
         <div className="content">
           <div className="eyebrow">DELIVERY INFRASTRUCTURE</div>
           <div className="title-row"><div><h1>Webhook Relay</h1><p className="subtitle">A clear view of every event, from intake to delivery.</p></div><span className={`connection ${connection}`} role="status">{status}</span></div>
+          <AccessPanel />
           <section className="hero" aria-labelledby="foundation-title">
-            <div><span className="pill">FOUNDATION</span><h2 id="foundation-title">Your relay starts here.</h2><p>The dashboard and API are ready for their first review. Workspaces, subscriptions, and event delivery will arrive in the next increments.</p></div>
+            <div><span className="pill">FOUNDATION</span><h2 id="foundation-title">Built for your team.</h2><p>Create your workspace, invite your team, and manage access. Membership changes appear in the workspace activity feed.</p></div>
             <div className="flow" aria-label="Planned event flow"><span>Event</span><i aria-hidden="true">→</i><span className="flow-relay">Relay</span><i aria-hidden="true">→</i><span>Endpoint</span></div>
           </section>
           <section className="panels" aria-label="Project status">
-            <article className="panel"><div className="panel-heading"><h2>Service status</h2><span className="tag">LIVE CHECK</span></div><div className="service-row"><div><strong>Relay API</strong><small>Liveness · /api/health</small></div><span className={`status-dot ${connection}`} aria-hidden="true" /></div><p className="status-description">{connection === 'connected' ? 'The API responded successfully. Database readiness will be added with persistence.' : connection === 'checking' ? 'Waiting for a response from the API.' : 'The API could not be reached or returned an unexpected response. Start the backend and try again.'}</p><button type="button" disabled={connection === 'checking'} onClick={() => setAttempt(value => value + 1)}>Check connection <span aria-hidden="true">↻</span></button></article>
-            <article className="panel"><div className="panel-heading"><h2>Next increment</h2><span className="tag">PLANNED</span></div><h3>Database foundation</h3><p>PostgreSQL, migrations, and the first workspace table. Each schema change gets its own review.</p><div className="review-note">Review → fix findings → merge → next PR</div></article>
+            <article className="panel"><div className="panel-heading"><h2>Service status</h2><span className="tag">LIVE CHECK</span></div><div className="service-row"><div><strong>Relay API</strong><small>Liveness · /api/health</small></div><span className={`status-dot ${connection}`} aria-hidden="true" /></div><p className="status-description">{connection === 'connected' ? 'The API responded successfully. Workspace access uses authenticated database requests.' : connection === 'checking' ? 'Waiting for a response from the API.' : 'The API could not be reached or returned an unexpected response. Start the backend and try again.'}</p><button type="button" disabled={connection === 'checking'} onClick={() => setAttempt(value => value + 1)}>Check connection <span aria-hidden="true">↻</span></button></article>
+            <article className="panel"><div className="panel-heading"><h2>Next increment</h2><span className="tag">PLANNED</span></div><h3>Subscriptions and event intake</h3><p>Connect your endpoints and receive events. These delivery features are planned for the next increment.</p><div className="review-note">Review → fix findings → merge → next PR</div></article>
           </section>
           <section className="empty-state" aria-labelledby="events-title"><div className="empty-icon" aria-hidden="true">⇄</div><h2 id="events-title">Event history is planned</h2><p>Event ingestion and delivery are not implemented in this baseline.</p></section>
           <footer>Webhook Relay <span>Small changes. Reviewed together.</span></footer>
