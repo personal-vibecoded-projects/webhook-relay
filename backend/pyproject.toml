@@ -8,6 +8,7 @@ dependencies = ["fastapi", "uvicorn", "sqlalchemy", "alembic", "psycopg[binary]"
 dev = ["httpx2", "pytest", "ruff"]
 
 [tool.pytest.ini_options]
+addopts = "--assert=plain"
 testpaths = ["tests"]
 pythonpath = ["src"]
 markers = ["database: requires an isolated PostgreSQL test database"]
