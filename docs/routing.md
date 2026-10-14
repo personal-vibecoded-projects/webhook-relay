@@ -69,3 +69,8 @@ Dry-run traces contain rule IDs and outcomes only: `disabled`,
 `duplicate_destination`, or `routed`. Stopped rules are not evaluated or traced.
 Literal filter values and payloads are omitted from dataclass representations.
 There is no expression evaluation, user regex, or external I/O in the engine.
+
+Output is bounded at 256 KiB per delivery and 1 MiB for the complete decision.
+Projection and fan-out amplification beyond either limit fails the entire
+dry run before any intents are returned. Limits are checked before copying
+output values into independent delivery payloads.

@@ -360,3 +360,22 @@ def test_maximum_rules_route_deterministically_without_side_effects():
     assert one == two
     assert len(one.deliveries) == 64
     assert one.deliveries[0].rule_id == "rule63"
+
+
+def test_output_budget_bounds_projection_and_fanout_amplification():
+    body = json.dumps({"text": "x" * 200_000}).encode()
+    amplified = plan(
+        rule(
+            projection=[
+                {"source": "", "target": "first"},
+                {"source": "", "target": "second"},
+            ]
+        )
+    )
+    with pytest.raises(InvalidRoutingEvent, match="output exceeds"):
+        route_event(amplified, "invoice.paid", body)
+    fanout = plan(
+        *(rule(id=f"rule{i}", destination_id=str(UUID(int=i + 1))) for i in range(6))
+    )
+    with pytest.raises(InvalidRoutingEvent, match="output exceeds"):
+        route_event(fanout, "invoice.paid", body)

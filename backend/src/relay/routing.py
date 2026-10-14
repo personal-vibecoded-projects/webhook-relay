@@ -10,6 +10,7 @@ from uuid import UUID
 
 MAX_CONFIG_BYTES = 128 * 1024
 MAX_EVENT_BYTES = 256 * 1024
+MAX_DECISION_BYTES = 1024 * 1024
 MAX_RULES = 64
 MAX_PREDICATES = 512
 _ID = re.compile(r"[a-z][a-z0-9_-]{0,63}\Z")
@@ -364,6 +365,7 @@ def route_event(plan: RoutePlan, event_type: str, body: bytes) -> RoutingDecisio
         raise InvalidRoutingEvent("Event payload must be an object")
     deliveries, trace = [], []
     destinations = set()
+    output_bytes = 0
     for rule in plan.rules:
         outcome = None
         if not rule.enabled:
@@ -386,18 +388,27 @@ def route_event(plan: RoutePlan, event_type: str, body: bytes) -> RoutingDecisio
                         outcome = "required_projection_missing"
                         break
                 else:
-                    projected[projection.target] = copy.deepcopy(value)
+                    projected[projection.target] = value
         if outcome is None and rule.destination_id in destinations:
             outcome = "duplicate_destination"
         if outcome is None:
+            output = projected if rule.projection is not None else payload
+            # Count before copying: repeated root projections and fan-out must
+            # not amplify a bounded input into unbounded output allocations.
+            size = len(
+                json.dumps(output, ensure_ascii=False, separators=(",", ":")).encode(
+                    "utf-8"
+                )
+            )
+            if size > MAX_EVENT_BYTES or output_bytes + size > MAX_DECISION_BYTES:
+                raise InvalidRoutingEvent("Routing output exceeds size budget")
+            output_bytes += size
             destinations.add(rule.destination_id)
             deliveries.append(
                 DeliveryIntent(
                     rule.destination_id,
                     rule.rule_id,
-                    projected
-                    if rule.projection is not None
-                    else copy.deepcopy(payload),
+                    copy.deepcopy(output),
                 )
             )
             outcome = "routed"
