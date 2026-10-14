@@ -21,7 +21,7 @@ from relay.schemas import (
     WorkspaceRename,
     WorkspaceView,
 )
-from relay.security import COOKIE, digest, require_origin
+from relay.security import cookie_name, digest, require_origin
 
 router = APIRouter(prefix="/api", dependencies=[Depends(require_origin)])
 Cursor = Annotated[str | None, Query(max_length=512)]
@@ -47,12 +47,12 @@ def me(actor: Actor):
 def logout(request: Request, response: Response, session: DB, actor: Actor):
     session.execute(
         delete(AuthSession).where(
-            AuthSession.token_hash == digest(request.cookies[COOKIE])
+            AuthSession.token_hash == digest(request.cookies[cookie_name(request)])
         )
     )
     response.delete_cookie(
-        COOKIE,
-        path="/api",
+        cookie_name(request),
+        path="/",
         httponly=True,
         secure=not request.app.state.security.allow_http_cookie,
         samesite="lax",

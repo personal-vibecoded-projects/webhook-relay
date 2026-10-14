@@ -7,7 +7,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from relay.models import AuthSession, User
-from relay.security import COOKIE, digest
+from relay.security import cookie_name, digest
 
 
 def get_session(request: Request):
@@ -27,7 +27,7 @@ DB = Annotated[Session, Depends(get_session, scope="function")]
 
 
 def current_user(request: Request, session: DB) -> User:
-    token = request.cookies.get(COOKIE, "")
+    token = request.cookies.get(cookie_name(request), "")
     if not re.fullmatch(r"[A-Za-z0-9_-]{43}", token):
         raise HTTPException(401, "Sign in to continue")
     user = session.scalar(

@@ -40,3 +40,17 @@ def test_origin_check_runs_before_any_database_write():
             "/api/workspaces", json={"slug": "demo-team", "name": "Team"}
         )
     assert result.status_code == 403
+
+
+def test_oversized_json_is_rejected_before_validation():
+    with TestClient(create_app()) as client:
+        response = client.post("/api/auth/register", json={"name": "x" * 20000})
+    assert response.status_code == 413
+
+
+def test_oversized_chunked_body_is_rejected():
+    with TestClient(create_app()) as client:
+        response = client.post(
+            "/api/auth/register", content=iter([b"x" * 10000, b"x" * 10000])
+        )
+    assert response.status_code == 413

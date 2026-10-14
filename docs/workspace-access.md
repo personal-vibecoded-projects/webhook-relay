@@ -44,6 +44,8 @@ Origin matching `RELAY_PUBLIC_ORIGIN`; missing, null, and foreign origins are
 rejected. API data responses are marked `Cache-Control: no-store`.
 
 Sessions use a random HttpOnly cookie, SameSite=Lax, with a twelve-hour expiry.
+HTTPS uses a `__Host-` cookie with no Domain attribute and root Path. API request
+bodies are capped at 16 KiB before parsing, including chunked requests.
 Only the SHA-256 digest of its high-entropy token is stored in PostgreSQL. Passwords
 use a separate slow Argon2id hash. Login rotates the browser session, logout
 revokes it, and disabled users/expired sessions cannot access workspace data.

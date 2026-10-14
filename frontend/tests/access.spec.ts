@@ -32,6 +32,10 @@ async function login(
       .click();
     await expect(page.getByText("Signed in as")).toBeVisible();
   } catch {
+    await page
+      .getByLabel("Password", { exact: true })
+      .fill("", { timeout: 1000 })
+      .catch(() => {});
     // Do not include Playwright action logs containing credential arguments.
     throw new Error("Account setup through the dashboard failed");
   }

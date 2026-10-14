@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from relay.api import router
 from relay.database import migration_engine
-from relay.security import SecuritySettings
+from relay.security import BodyLimitMiddleware, SecuritySettings
 
 
 class HealthResponse(BaseModel):
@@ -35,6 +35,7 @@ def create_app(engine=None, security=None):
 
     application = FastAPI(title="Webhook Relay", version="0.2.0", lifespan=lifespan)
     application.state.security = security or SecuritySettings.from_environment()
+    application.add_middleware(BodyLimitMiddleware)
     application.include_router(router)
     application.add_api_route(
         "/api/health", health, response_model=HealthResponse, tags=["health"]

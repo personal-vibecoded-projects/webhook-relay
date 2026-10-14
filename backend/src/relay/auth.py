@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from relay.models import AuthSession, AuthThrottle, User
 from relay.schemas import Credentials
-from relay.security import COOKIE, digest, hash_password, hasher, verify_password
+from relay.security import cookie_name, digest, hash_password, hasher, verify_password
 
 
 def throttle(request: Request, username: str, *, registration=False):
@@ -66,7 +66,7 @@ def issue_session(session: Session, user: User, request: Request, response: Resp
         session.execute(
             delete(AuthSession).where(AuthSession.token_hash.in_(existing[4:]))
         )
-    old_token = request.cookies.get(COOKIE)
+    old_token = request.cookies.get(cookie_name(request))
     if old_token:
         session.execute(
             delete(AuthSession).where(AuthSession.token_hash == digest(old_token))
@@ -81,10 +81,10 @@ def issue_session(session: Session, user: User, request: Request, response: Resp
     )
     session.flush()
     response.set_cookie(
-        COOKIE,
+        cookie_name(request),
         token,
         max_age=43200,
-        path="/api",
+        path="/",
         httponly=True,
         secure=not request.app.state.security.allow_http_cookie,
         samesite="lax",

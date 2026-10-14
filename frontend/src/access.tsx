@@ -59,6 +59,7 @@ export function AccessPanel() {
         }),
       );
       form.reset();
+      setMode("login");
       setUser(account);
     } catch (error) {
       setError(messageFor(error));

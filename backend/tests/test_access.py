@@ -103,7 +103,7 @@ def test_session_cookie_flags_and_logout_revocation(clients, database):
         cookie[COOKIE][k] for k in ("httponly", "secure", "samesite", "path")
     )
     assert http_only and secure
-    assert same_site == "lax" and path == "/api"
+    assert same_site == "lax" and path == "/"
     assert client.post("/api/auth/logout").status_code == 204
     assert client.get("/api/auth/me").status_code == 401
     with Session(database) as session:
