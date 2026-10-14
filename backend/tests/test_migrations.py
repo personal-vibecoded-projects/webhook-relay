@@ -1,18 +1,15 @@
 """Real PostgreSQL checks, isolated in a newly created database per test."""
 
 import os
-from pathlib import Path
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import pytest
 from alembic import command
-from alembic.config import Config
-from psycopg import sql
+from conftest import migrate
 from sqlalchemy import inspect, select, text
 from sqlalchemy.exc import DataError, IntegrityError
 from sqlalchemy.orm import Session
 
-from relay.database import database_url, migration_engine
 from relay.models import Workspace
 
 pytestmark = [
@@ -24,50 +21,6 @@ pytestmark = [
 ]
 
 
-def migrate(engine, operation, target=None):
-    config = Config(str(Path(__file__).resolve().parents[1] / "alembic.ini"))
-    with engine.begin() as connection:
-        config.attributes["connection"] = connection
-        if target is None:
-            operation(config)
-        else:
-            operation(config, target)
-
-
-@pytest.fixture
-def database():
-    name = "relay_test_" + uuid4().hex
-    admin = migration_engine(database_url().set(database="postgres"))
-    engine = None
-    created = False
-    try:
-        with admin.connect().execution_options(
-            isolation_level="AUTOCOMMIT"
-        ) as connection:
-            with connection.connection.driver_connection.cursor() as cursor:
-                cursor.execute(
-                    sql.SQL("CREATE DATABASE {} ").format(sql.Identifier(name))
-                )
-        created = True
-        engine = migration_engine(database_url().set(database=name))
-        migrate(engine, command.upgrade, "head")
-        yield engine
-    finally:
-        if engine is not None:
-            engine.dispose()
-        if created:
-            with admin.connect().execution_options(
-                isolation_level="AUTOCOMMIT"
-            ) as connection:
-                with connection.connection.driver_connection.cursor() as cursor:
-                    cursor.execute(
-                        sql.SQL("DROP DATABASE {} WITH (FORCE)").format(
-                            sql.Identifier(name)
-                        )
-                    )
-        admin.dispose()
-
-
 def test_upgrade_is_repeatable_and_matches_models(database):
     migrate(database, command.upgrade, "head")
     migrate(database, command.check)
@@ -75,7 +28,7 @@ def test_upgrade_is_repeatable_and_matches_models(database):
     with database.connect() as connection:
         assert (
             connection.scalar(text("SELECT version_num FROM alembic_version"))
-            == "0001_workspaces"
+            == "0002_event_inbox"
         )
 
 
