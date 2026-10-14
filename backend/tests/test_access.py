@@ -526,7 +526,8 @@ def test_role_is_rechecked_after_a_waiting_workspace_lock(clients, database):
                     ) as connection:
                         blocked = connection.scalar(
                             text(
-                                "SELECT wait_event_type = 'Lock' FROM pg_stat_activity WHERE pid = :pid"
+                                "SELECT wait_event_type = 'Lock' "
+                                "FROM pg_stat_activity WHERE pid = :pid"
                             ),
                             {"pid": pid},
                         )
