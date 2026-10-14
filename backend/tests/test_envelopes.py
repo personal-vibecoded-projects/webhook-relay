@@ -47,12 +47,15 @@ def test_rejects_invalid_fields(changes):
         b"{}",
         b"not json",
         b"\xff",
-        b'{"payload":{"duplicate":1,"duplicate":2}}',
-        b'{"event_type":"one","event_type":"two"}',
-        b'{"payload":NaN}',
-        b'{"payload":Infinity}',
-        b'{"payload":1e999}',
-        b'{"payload":"\\ud800"}',
+        b'{"event_type":"invoice.paid","source_id":"evt1",'
+        b'"payload":{"duplicate":1,"duplicate":2}}',
+        b'{"event_type":"invoice.paid","event_type":"invoice.void",'
+        b'"source_id":"evt1","payload":{}}',
+        b'{"event_type":"invoice.paid","source_id":"evt1","payload":{"n":NaN}}',
+        b'{"event_type":"invoice.paid","source_id":"evt1","payload":{"n":Infinity}}',
+        b'{"event_type":"invoice.paid","source_id":"evt1","payload":{"n":1e999}}',
+        b'{"event_type":"invoice.paid","source_id":"evt1",'
+        b'"payload":{"value":"\\ud800"}}',
     ],
 )
 def test_rejects_ambiguous_or_invalid_json(raw):
