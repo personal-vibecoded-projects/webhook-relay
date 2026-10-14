@@ -1,8 +1,10 @@
 import os
 import secrets
+import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from http.cookies import SimpleCookie
+from queue import Queue
 from threading import Barrier
 from uuid import UUID, uuid4
 
@@ -25,6 +27,7 @@ from relay.models import (
     Workspace,
 )
 from relay.provision import grant_runtime_access
+from relay.schemas import WorkspaceRename
 from relay.security import COOKIE, SecuritySettings
 
 pytestmark = [
@@ -480,3 +483,60 @@ def test_concurrent_ownership_transfers_have_only_one_winner(clients, database):
             )
             == 1
         )
+
+
+def test_role_is_rechecked_after_a_waiting_workspace_lock(clients, database):
+    owner, admin = clients("owner"), clients("admin")
+    identifier = UUID(workspace(owner[0]))
+    join(owner[0], admin, str(identifier), "admin")
+    worker_pid = Queue()
+
+    def waiting_write():
+        try:
+            with Session(database) as session, session.begin():
+                actor = session.get(User, UUID(admin[1]["id"]))
+                worker_pid.put(session.scalar(select(func.pg_backend_pid())))
+                access.rename_workspace(
+                    session,
+                    actor,
+                    identifier,
+                    WorkspaceRename(name="Unauthorized change"),
+                )
+            return 200
+        except HTTPException as error:
+            return error.status_code
+
+    with Session(database) as controlling:
+        controlling.begin()
+        controlling.scalar(
+            select(Workspace).where(Workspace.id == identifier).with_for_update()
+        )
+        membership = controlling.get(Membership, (identifier, UUID(admin[1]["id"])))
+        membership.role = "viewer"
+        controlling.flush()
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(waiting_write)
+            try:
+                pid = worker_pid.get(timeout=10)
+                blocked = False
+                deadline = time.monotonic() + 5
+                while time.monotonic() < deadline:
+                    with database.connect().execution_options(
+                        isolation_level="AUTOCOMMIT"
+                    ) as connection:
+                        blocked = connection.scalar(
+                            text(
+                                "SELECT wait_event_type = 'Lock' FROM pg_stat_activity WHERE pid = :pid"
+                            ),
+                            {"pid": pid},
+                        )
+                    if blocked:
+                        break
+                    time.sleep(0.02)
+                controlling.commit()
+                outcome = future.result(timeout=10)
+            finally:
+                controlling.rollback()
+        assert blocked
+        assert outcome == 403
+    assert owner[0].get(f"/api/workspaces/{identifier}").json()["name"] == "Demo team"

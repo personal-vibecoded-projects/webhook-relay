@@ -35,7 +35,7 @@ def current_user(request: Request, session: DB) -> User:
         .join(AuthSession, AuthSession.user_id == User.id)
         .where(
             AuthSession.token_hash == digest(token),
-            AuthSession.expires_at > func.now(),
+            AuthSession.expires_at > func.clock_timestamp(),
             User.enabled.is_(True),
         )
     )

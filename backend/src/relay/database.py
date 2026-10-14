@@ -31,6 +31,7 @@ def migration_engine(url: URL | None = None) -> Engine:
     return create_engine(
         url if url is not None else database_url(),
         pool_pre_ping=True,
+        isolation_level="READ COMMITTED",
         hide_parameters=True,
         connect_args={"connect_timeout": 5, "options": "-c statement_timeout=10000"},
     )

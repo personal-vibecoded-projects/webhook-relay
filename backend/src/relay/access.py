@@ -37,7 +37,29 @@ def workspace_for(session: Session, workspace_id: UUID, actor: User, *, lock=Fal
         )
     )
     if lock:
-        statement = statement.with_for_update(of=Workspace)
+        visible = session.scalar(
+            select(Membership.user_id).where(
+                Membership.workspace_id == workspace_id, Membership.user_id == actor.id
+            )
+        )
+        if visible is None:
+            raise HTTPException(404, "Workspace not found")
+        workspace = session.scalar(
+            select(Workspace)
+            .where(Workspace.id == workspace_id, Workspace.ownership_state == "active")
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        membership = session.scalar(
+            select(Membership)
+            .where(
+                Membership.workspace_id == workspace_id, Membership.user_id == actor.id
+            )
+            .execution_options(populate_existing=True)
+        )
+        if workspace is None or membership is None:
+            raise HTTPException(404, "Workspace not found")
+        return workspace, membership
     row = session.execute(statement).one_or_none()
     if row is None:
         raise HTTPException(404, "Workspace not found")
@@ -227,7 +249,7 @@ def create_invitation(session, actor, workspace_id, body):
         raise HTTPException(404, "Ask this person to create an account first")
     if session.get(Membership, (workspace.id, invitee.id)) is not None:
         raise HTTPException(409, "User is already a member")
-    now = session.scalar(select(func.now()))
+    now = session.scalar(select(func.clock_timestamp()))
     existing = session.scalar(
         select(Invitation).where(
             Invitation.workspace_id == workspace.id,
@@ -283,14 +305,14 @@ def list_invitations(session, actor, workspace_id, cursor, limit):
         statement = statement.where(
             Invitation.invitee_id == actor.id,
             Invitation.status == "pending",
-            Invitation.expires_at > func.now(),
+            Invitation.expires_at > func.clock_timestamp(),
         )
     else:
         workspace, caller = workspace_for(session, workspace_id, actor)
         manager(workspace, caller)
         statement = statement.where(Invitation.workspace_id == workspace.id)
     rows = session.execute(paginate(statement, Invitation, cursor, limit)).all()
-    now = session.scalar(select(func.now()))
+    now = session.scalar(select(func.clock_timestamp()))
     return Page(
         items=[
             invite_view(i, name, username, now) for i, name, username in rows[:limit]
@@ -319,7 +341,7 @@ def accept_invitation(session, actor, invitation_id):
         if member is None:
             raise HTTPException(409, "Membership is no longer active")
         return workspace_view(workspace, member)
-    now = session.scalar(select(func.now()))
+    now = session.scalar(select(func.clock_timestamp()))
     authorized = inviter_authorized(session, workspace, invitation)
     if invitation.status != "pending" or invitation.expires_at <= now or not authorized:
         raise HTTPException(410, "Invitation is no longer valid")
@@ -359,7 +381,7 @@ def revoke_invitation(session, actor, workspace_id, invitation_id):
     if invitation.status != "revoked":
         invitation.status, invitation.resolved_at = (
             "revoked",
-            session.scalar(select(func.now())),
+            session.scalar(select(func.clock_timestamp())),
         )
         audit(
             session,

@@ -51,7 +51,7 @@ def throttle(request: Request, username: str, *, registration=False):
 
 
 def issue_session(session: Session, user: User, request: Request, response: Response):
-    now = session.scalar(select(func.now()))
+    now = session.scalar(select(func.clock_timestamp()))
     session.execute(
         delete(AuthSession).where(
             AuthSession.user_id == user.id, AuthSession.expires_at <= now
