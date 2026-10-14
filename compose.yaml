@@ -20,14 +20,16 @@ services:
     build:
       context: ./backend
       target: runtime
-    command: [".venv/bin/alembic", "upgrade", "head"]
+    command: [".venv/bin/python", "-m", "relay.migrate"]
     environment: &database_environment
       RELAY_DB_HOST: db
       RELAY_DB_NAME: relay
       RELAY_DB_USER: relay_migrator
       RELAY_DB_PASSWORD_FILE: /run/secrets/postgres_password
+      RELAY_RUNTIME_PASSWORD_FILE: /run/secrets/runtime_password
     secrets:
       - postgres_password
+      - runtime_password
     depends_on:
       db:
         condition: service_healthy
@@ -41,6 +43,7 @@ services:
       RUN_DATABASE_TESTS: "1"
     secrets:
       - postgres_password
+      - runtime_password
     depends_on:
       db:
         condition: service_healthy
@@ -48,6 +51,18 @@ services:
     build:
       context: ./backend
       target: runtime
+    environment:
+      RELAY_DB_HOST: db
+      RELAY_DB_NAME: relay
+      RELAY_DB_USER: relay_app
+      RELAY_DB_PASSWORD_FILE: /run/secrets/runtime_password
+      RELAY_PUBLIC_ORIGIN: http://localhost:5173
+      RELAY_ALLOW_HTTP_COOKIE: "1"
+    secrets:
+      - runtime_password
+    depends_on:
+      db:
+        condition: service_healthy
     ports:
       - "127.0.0.1:8000:8000"
     healthcheck:
@@ -77,3 +92,5 @@ volumes:
 secrets:
   postgres_password:
     file: ./.secrets/postgres_password
+  runtime_password:
+    file: ./.secrets/runtime_password

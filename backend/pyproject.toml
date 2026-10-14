@@ -1,13 +1,14 @@
 [project]
 name = "webhook-relay-api"
-version = "0.1.0"
+version = "0.2.0"
 requires-python = ">=3.12"
-dependencies = ["fastapi", "uvicorn", "sqlalchemy", "alembic", "psycopg[binary]"]
+dependencies = ["fastapi", "uvicorn", "sqlalchemy", "alembic", "psycopg[binary]", "argon2-cffi"]
 
 [dependency-groups]
 dev = ["httpx2", "pytest", "ruff"]
 
 [tool.pytest.ini_options]
+addopts = "--assert=plain"
 testpaths = ["tests"]
 pythonpath = ["src"]
 markers = ["database: requires an isolated PostgreSQL test database"]
